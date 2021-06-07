@@ -1,0 +1,204 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Pintusau Banking System AWS CloudFormation Template: Create a multi-az, load balanced and auto scaled application.",
+  "Parameters": {
+    "KeyName": {
+      "Description": "The EC2 Key Pair to allow SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    },
+    "DefaultVPC": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "Default VPC",
+      "ConstraintDescription": "must be the name of an existing VPC."
+    },
+    "SSHLocation": {
+      "Description": "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
+    "InstanceTCPPort": {
+      "Description": "Instance TCP Port to access the application",
+      "Type": "String",
+      "MinLength": "2",
+      "MaxLength": "4",
+      "AllowedPattern": "\\d{2,4}",
+      "ConstraintDescription": "must be a valid TCP Port."
+    },
+    "CPUPolicyTargetValue": {
+      "Description": "CPU target value for target tracking scaling policy",
+      "Type": "Number",
+      "MinValue": "0",
+      "MaxValue": "99",
+      "ConstraintDescription": "must be a number between 0-99."
+    }
+  },
+  "Resources": {
+    "ElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "LoadBalancerName": "pintusau-cf-lb",
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "CrossZone": "false",
+        "Listeners": [
+          {
+            "LoadBalancerPort": "80",
+            "InstancePort": {
+              "Ref": "InstanceTCPPort"
+            },
+            "Protocol": "HTTP"
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:80/actuator/health",
+          "HealthyThreshold": "3",
+          "UnhealthyThreshold": "5",
+          "Interval": "30",
+          "Timeout": "5"
+        }
+      }
+    },
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable SSH access and HTTP from the load balancer only",
+        "GroupName": "pintusau-cf-ec2-sg",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": {
+              "Ref": "SSHLocation"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "InstanceTCPPort"
+            },
+            "ToPort": {
+              "Ref": "InstanceTCPPort"
+            },
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "SourceSecurityGroupOwnerId": {
+              "Fn::GetAtt": [
+                "ElasticLoadBalancer",
+                "SourceSecurityGroup.OwnerAlias"
+              ]
+            },
+            "SourceSecurityGroupName": {
+              "Fn::GetAtt": [
+                "ElasticLoadBalancer",
+                "SourceSecurityGroup.GroupName"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "ImageId": "ami-014f1522bfa101e99",
+        "SecurityGroups": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ],
+        "InstanceType": "t2.micro",
+        "InstanceMonitoring": false,
+        "IamInstanceProfile": "arn:aws:iam::993042411437:instance-profile/pintusau@EC2Role"
+      }
+    },
+    "WebServerGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AutoScalingGroupName": "pintusau-cf-asg",
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "LaunchConfigurationName": {
+          "Ref": "LaunchConfig"
+        },
+        "MinSize": "1",
+        "MaxSize": "3",
+        "LoadBalancerNames": [
+          {
+            "Ref": "ElasticLoadBalancer"
+          }
+        ]
+      }
+    },
+    "CPUPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "WebServerGroup"
+        },
+        "PolicyType": "TargetTrackingScaling",
+        "TargetTrackingConfiguration": {
+          "PredefinedMetricSpecification": {
+            "PredefinedMetricType": "ASGAverageCPUUtilization"
+          },
+          "TargetValue": {
+            "Ref": "CPUPolicyTargetValue"
+          }
+        },
+        "EstimatedInstanceWarmup" : 120
+      }
+    }
+  },
+  "Outputs": {
+    "SwaggerURL": {
+      "Description": "The Swagger UI url",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "http://",
+            {
+              "Fn::GetAtt": [
+                "ElasticLoadBalancer",
+                "DNSName"
+              ]
+            },
+            "/swagger-ui.html"
+          ]
+        ]
+      }
+    },
+    "InfoURL": {
+      "Description": "The EC2 info url",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "http://",
+            {
+              "Fn::GetAtt": [
+                "ElasticLoadBalancer",
+                "DNSName"
+              ]
+            },
+            "/ec2/info"
+          ]
+        ]
+      }
+    }
+  }
+}
