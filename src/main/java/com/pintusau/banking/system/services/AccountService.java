@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.pintusau.banking.system.entities.Account;
+import com.pintusau.banking.system.entities.CompositeKey;
 import com.pintusau.banking.system.repositories.AccountDao;
 
 @Service
@@ -25,6 +26,11 @@ public class AccountService implements CrudService<Account> {
   }
 
   @Override
+  public Account getByCompositeKey(CompositeKey compositeKey) {
+    return accountDao.getByCompositeKey(compositeKey);
+  }
+
+  @Override
   public List<Account> getAll() {
     return accountDao.getAll();
   }
@@ -32,5 +38,15 @@ public class AccountService implements CrudService<Account> {
   @Override
   public void deleteById(Long id) {
     accountDao.deleteById(id);
+  }
+
+  @Override
+  public void deleteByCompositeKey(CompositeKey compositeKey) {
+    accountDao.deleteByCompositeKey(compositeKey);
+  }
+
+  @Override
+  public Account getByIndex(String indexName, CompositeKey compositeKey) {
+    return accountDao.getByIndex(indexName, compositeKey);
   }
 }

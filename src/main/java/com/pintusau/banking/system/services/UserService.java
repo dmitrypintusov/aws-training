@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.pintusau.banking.system.entities.CompositeKey;
 import com.pintusau.banking.system.entities.User;
 import com.pintusau.banking.system.repositories.UserDao;
 
@@ -25,12 +26,27 @@ public class UserService implements CrudService<User> {
   }
 
   @Override
+  public User getByCompositeKey(CompositeKey compositeKey) {
+    return userDao.getByCompositeKey(compositeKey);
+  }
+
+  @Override
   public void deleteById(Long id) {
     userDao.deleteById(id);
   }
 
   @Override
+  public void deleteByCompositeKey(CompositeKey compositeKey) {
+    userDao.deleteByCompositeKey(compositeKey);
+  }
+
+  @Override
   public List<User> getAll() {
     return userDao.getAll();
+  }
+
+  @Override
+  public User getByIndex(String indexName, CompositeKey compositeKey) {
+    return userDao.getByIndex(indexName, compositeKey);
   }
 }

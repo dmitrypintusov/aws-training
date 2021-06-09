@@ -2,6 +2,8 @@ package com.pintusau.banking.system.repositories;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -9,11 +11,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.pintusau.banking.system.entities.AbstractEntity;
+import com.pintusau.banking.system.entities.CompositeKey;
+import com.pintusau.banking.system.utils.DynamoDbClientUtil;
+import com.pintusau.banking.system.utils.DynamoDbItemMapper;
 import com.pintusau.banking.system.utils.JsonUtil;
 import com.pintusau.banking.system.utils.S3ClientUtil;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -32,6 +45,12 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
   private JsonUtil jsonUtil;
   @Autowired
   private S3ClientUtil s3ClientUtil;
+  @Autowired
+  private DynamoDbClient dynamoDbClient;
+  @Autowired
+  private DynamoDbClientUtil dynamoDbClientUtil;
+  @Autowired
+  private DynamoDbItemMapper dynamoDbItemMapper;
 
   private Class<T> type;
 
@@ -54,6 +73,15 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
         message = String.format("Exception while accessing S3: %s", e.getMessage());
         LOGGER.error(message);
       }
+
+      try {
+        Map<String, AttributeValue> map = dynamoDbItemMapper.objectToMap(entity);
+        PutItemRequest dbRequest = dynamoDbClientUtil.putItemRequest(this.getTableName(), map);
+        dynamoDbClient.putItem(dbRequest);
+      } catch (Exception e) {
+        message = String.format("Exception while accessing dynamoDB: %s", e.getMessage());
+        LOGGER.error(message);
+      }
     }
 
     return entity;
@@ -68,6 +96,35 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
       return (T) jsonUtil.deserialize(jsonValue, type);
     } catch (Exception e) {
       LOGGER.error("Exception while accessing S3: {}", e.getMessage());
+    }
+
+    return null;
+  }
+
+  @Override
+  public T getByCompositeKey(CompositeKey compositeKey) {
+    LOGGER.info("Get entity by composite id");
+
+    try {
+      GetItemRequest request = dynamoDbClientUtil.getItemRequest(this.getTableName(), compositeKey);
+      GetItemResponse itemResponse = dynamoDbClient.getItem(request);
+      return (T) dynamoDbItemMapper.mapToObject(itemResponse, type);
+    } catch (Exception e) {
+      LOGGER.error("Exception while accessing dynamoDB: {}", e.getMessage());
+    }
+
+    return null;
+  }
+
+  @Override
+  public T getByIndex(String indexName, CompositeKey compositeKey) {
+    LOGGER.info("Get entity by index: {}", indexName);
+    try {
+      QueryRequest request = dynamoDbClientUtil.queryRequest(getTableName(), indexName, compositeKey);
+      QueryResponse query = dynamoDbClient.query(request);
+      return (T) dynamoDbItemMapper.mapToObject(query, type);
+    } catch (Exception e) {
+      LOGGER.error("Exception while accessing dynamoDB: {}", e.getMessage());
     }
 
     return null;
@@ -106,6 +163,24 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
     }
   }
 
+  @Override
+  public void deleteByCompositeKey(CompositeKey compositeKey) {
+    String message = String.format("Delete entity by composite key: %s=%s, %s=%s",
+        compositeKey.getPrimaryKey().getName(),
+        compositeKey.getPrimaryKey().getValue(),
+        compositeKey.getSortKey().getName(),
+        compositeKey.getSortKey().getValue());
+
+    LOGGER.info(message);
+    try {
+      DeleteItemRequest request = dynamoDbClientUtil.deleteItemRequest(getTableName(), compositeKey);
+      dynamoDbClient.deleteItem(request);
+    } catch (Exception e) {
+      message = String.format("Exception while accessing S3: %s", e.getMessage());
+      LOGGER.error(message);
+    }
+  }
+
   private String generateKey(Long id) {
     if (type != null && id != null) {
       return String.join("/", type.getSimpleName(), String.valueOf(id));
@@ -117,5 +192,9 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
   private Long keyToId(String key) {
     String[] strings = key.split("/");
     return new Long(strings[1]);
+  }
+
+  private String getTableName() {
+    return Optional.of(type.getSimpleName()).orElse(null);
   }
 }

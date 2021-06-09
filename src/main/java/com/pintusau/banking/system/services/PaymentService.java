@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.pintusau.banking.system.entities.CompositeKey;
 import com.pintusau.banking.system.entities.Payment;
 import com.pintusau.banking.system.repositories.PaymentDao;
 
@@ -25,6 +26,11 @@ public class PaymentService implements CrudService<Payment> {
   }
 
   @Override
+  public Payment getByCompositeKey(CompositeKey compositeKey) {
+    return paymentDao.getByCompositeKey(compositeKey);
+  }
+
+  @Override
   public List<Payment> getAll() {
     return paymentDao.getAll();
   }
@@ -32,5 +38,15 @@ public class PaymentService implements CrudService<Payment> {
   @Override
   public void deleteById(Long id) {
     paymentDao.deleteById(id);
+  }
+
+  @Override
+  public void deleteByCompositeKey(CompositeKey compositeKey) {
+    paymentDao.deleteByCompositeKey(compositeKey);
+  }
+
+  @Override
+  public Payment getByIndex(String indexName, CompositeKey compositeKey) {
+    return paymentDao.getByIndex(indexName, compositeKey);
   }
 }
