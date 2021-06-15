@@ -12,10 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.pintusau.banking.system.entities.AbstractEntity;
 import com.pintusau.banking.system.entities.CompositeKey;
+import com.pintusau.banking.system.entities.enums.Action;
 import com.pintusau.banking.system.utils.DynamoDbClientUtil;
 import com.pintusau.banking.system.utils.DynamoDbItemMapper;
 import com.pintusau.banking.system.utils.JsonUtil;
 import com.pintusau.banking.system.utils.S3ClientUtil;
+import com.pintusau.banking.system.utils.SnsClientUtil;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
@@ -34,6 +36,9 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import software.amazon.awssdk.services.sns.model.PublishResponse;
 
 public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T> {
 
@@ -51,6 +56,10 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
   private DynamoDbClientUtil dynamoDbClientUtil;
   @Autowired
   private DynamoDbItemMapper dynamoDbItemMapper;
+  @Autowired
+  private SnsClient snsClient;
+  @Autowired
+  private SnsClientUtil snsClientUtil;
 
   private Class<T> type;
 
@@ -81,6 +90,14 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
       } catch (Exception e) {
         message = String.format("Exception while accessing dynamoDB: %s", e.getMessage());
         LOGGER.error(message);
+      }
+
+      try {
+        PublishRequest request = snsClientUtil.publishRequest(message, Action.CREATE_UPDATE);
+        PublishResponse response = snsClient.publish(request);
+        LOGGER.info("Message id: {}", response.messageId());
+      } catch (Exception e) {
+        LOGGER.error("Exception while accessing SNS: {}", e.getMessage());
       }
     }
 
@@ -152,14 +169,24 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
 
   @Override
   public void deleteById(Long id) {
+    String message = String.format("Delete entity by id: %s", id);
+
     LOGGER.info("Delete entity by id: {}", id);
     try {
       DeleteObjectRequest request = s3ClientUtil.deleteRequest(generateKey(id));
 
       awsS3Client.deleteObject(request);
     } catch (Exception e) {
-      String message = String.format("Exception while accessing S3: %s", e.getMessage());
+      message = String.format("Exception while accessing S3: %s", e.getMessage());
       LOGGER.error(message);
+    }
+
+    try {
+      PublishRequest request = snsClientUtil.publishRequest(message, Action.DELETE);
+      PublishResponse response = snsClient.publish(request);
+      LOGGER.info("Message id: {}", response.messageId());
+    } catch (Exception e) {
+      LOGGER.error("Exception while accessing SNS: {}", e.getMessage());
     }
   }
 
@@ -178,6 +205,14 @@ public abstract class AbstractDao<T extends AbstractEntity> implements CrudDao<T
     } catch (Exception e) {
       message = String.format("Exception while accessing S3: %s", e.getMessage());
       LOGGER.error(message);
+    }
+
+    try {
+      PublishRequest request = snsClientUtil.publishRequest(message, Action.DELETE);
+      PublishResponse response = snsClient.publish(request);
+      LOGGER.info("Message id: {}", response.messageId());
+    } catch (Exception e) {
+      LOGGER.error("Exception while accessing SNS: {}", e.getMessage());
     }
   }
 
