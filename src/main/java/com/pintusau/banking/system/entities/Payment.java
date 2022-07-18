@@ -8,8 +8,7 @@ import lombok.EqualsAndHashCode;
 @Data
 public class Payment extends AbstractEntity {
 
-    private Double sum;
-    private Currency currency;
-    private String description;
-
+  private Double sum;
+  private Currency currency;
+  private String description;
 }

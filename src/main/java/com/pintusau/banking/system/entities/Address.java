@@ -7,8 +7,7 @@ import lombok.EqualsAndHashCode;
 @Data
 public class Address extends AbstractEntity {
 
-    private String street;
-    private int house;
-    private int flat;
-
+  private String street;
+  private int house;
+  private int flat;
 }
