@@ -24,7 +24,7 @@ ___
 
 - CREATE A BUCKET:
   ```  
-  aws s3 mb s3://banking-system-repo --region eu-west-1  
+  aws s3 mb s3://demo-banking-system-repository --region eu-west-1  
   aws s3api create-bucket --bucket banking-system-repo --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1  
   
   aws s3 mb s3://banking-system-entities --region eu-west-1  
@@ -32,25 +32,25 @@ ___
   ``` 
 - ADD VERSIONING:
   ```  
-  aws s3api put-bucket-versioning --bucket banking-system-repo --versioning-configuration Status=Enabled
+  aws s3api put-bucket-versioning --bucket demo-banking-system-repository --versioning-configuration Status=Enabled
   
   aws s3api put-bucket-versioning --bucket banking-system-entities --versioning-configuration Status=Enabled
   ```   
 - ADD PUBLIC ACCESS BLOCK:  
   ```  
-  aws s3api put-public-access-block --bucket banking-system-repo --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+  aws s3api put-public-access-block --bucket demo-banking-system-repository --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
   
   aws s3api put-public-access-block --bucket banking-system-entities --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
   ```  
 - ADD TAGS:  
   ```  
-  aws s3api put-bucket-tagging --bucket banking-system-repo --tagging "TagSet=[{Key=user,Value=dzmitry.pintusau}]"
+  aws s3api put-bucket-tagging --bucket demo-banking-system-repository --tagging "TagSet=[{Key=user,Value=dzmitry.pintusau}]"
   
-  aws s3api put-bucket-tagging --bucket banking-system-entities --tagging "TagSet=[{Key=user,Value=dzmitry.pintusau}]"  
+  aws s3api put-bucket-tagging --bucket demo-banking-system-entities --tagging "TagSet=[{Key=user,Value=dzmitry.pintusau}]"  
   ```  
 - UPLOAD:  
   ```  
-  aws s3api put-object --bucket banking-system-repo --key banking-system.jar --body /Users/dzmitry.pintusau/GIT/AWS/aws-training/target/banking-system.jar
+  aws s3api put-object --bucket demo-banking-system-repository --key banking-system.jar --body /Users/dzmitry.pintusau/GIT/AWS/aws-training/target/banking-system.jar
   ```   
 - LIST FILES:  
   ```  
