@@ -7,8 +7,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class EC2Instance {
 
-    private String instanceId;
-    private String instanceType;
-    private String availabilityZone;
-    private String architecture;
+  private String instanceId;
+  private String instanceType;
+  private String availabilityZone;
+  private String architecture;
 }

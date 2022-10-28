@@ -18,9 +18,11 @@ Content-Transfer-Encoding: 7bit
 Content-Disposition: attachment; filename="userdata.txt"
 
 #!/bin/bash
-aws s3 cp s3://pintusau-banking-system-repository/banking-system.jar /tmp
+sudo yum update -d
+sudo yum install java-11-amazon-corretto -y
+aws s3 cp s3://banking-system-repo/banking-system.jar /tmp
 java -jar /tmp/banking-system.jar
-sudo yum install -y awslogs
+sudo yum install -y awslogsp
 sudo systemctl start awslogsd
 sudo systemctl enable awslogsd.service
 --//

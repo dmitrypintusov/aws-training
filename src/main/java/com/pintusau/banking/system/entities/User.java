@@ -8,13 +8,13 @@ import lombok.EqualsAndHashCode;
 @Data
 public class User extends AbstractEntity {
 
-    private String email;
-    private String firstName;
-    private String lastName;
-    private boolean active;
+  private String email;
+  private String firstName;
+  private String lastName;
+  private boolean active;
 
-    private Role role;
-    private Address address;
-    private Account account;
+  private Role role;
+  private Address address;
+  private Account account;
 
 }
