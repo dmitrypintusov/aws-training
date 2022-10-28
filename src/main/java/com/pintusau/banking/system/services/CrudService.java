@@ -1,14 +1,16 @@
 package com.pintusau.banking.system.services;
 
+import com.pintusau.banking.system.entities.AbstractEntity;
 import java.util.List;
+import java.util.Optional;
 
-public interface CrudService<T> {
+public interface CrudService<E extends AbstractEntity> {
 
-  T createOrUpdate(T entity);
+  E createOrUpdate(E entity);
 
-  T getById(Long id);
+  E getById(Long id);
 
-  List<T> getAll();
+  List<E> getAll();
 
   void deleteById(Long id);
 }
